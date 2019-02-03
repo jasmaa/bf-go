@@ -7,15 +7,14 @@ import (
 	"os"
 	"io/ioutil"
 )
-	
-var program []byte
-var pc int
-var memory []byte
-var dc int
-var inp []byte
+
+type BF struct {
+	pc, dc int
+	program, memory, inp []byte
+}
 
 // Load program
-func load(fname string){
+func (bf *BF) Load(fname string){
 
 	data, err := ioutil.ReadFile(fname)
 	
@@ -25,45 +24,46 @@ func load(fname string){
 	}
 	
 	// Initialize
-	program = data
-	pc = 0
-	memory = make([]byte, 30000)
-	dc = 0
-	inp = make([]byte, 1)
+	bf.program = data
+	bf.pc = 0
+	bf.memory = make([]byte, 30000)
+	bf.dc = 0
 }
 
 // Run program
-func run(){
+func (bf *BF) Run(){
 
-	for ; pc < len(program); {
+	for ; bf.pc < len(bf.program); {
 	
 		// step
-		switch program[pc] {
+		switch bf.program[bf.pc] {
 			case '>':
-				dc++
-				if dc >= len(memory) {
+				bf.dc++
+				if bf.dc >= len(bf.memory) {
 					fmt.Println("ERROR: Data pointer out-of-bounds")
 					return
 				}
 				
 			case '<':
-				dc--
-				if dc < 0 {
+				bf.dc--
+				if bf.dc < 0 {
 					fmt.Println("ERROR: Data pointer out-of-bounds")
 					return
 				}
 				
 			case '+':
-				memory[dc]++
+				bf.memory[bf.dc]++
 				
 			case '-':
-				memory[dc]--
+				bf.memory[bf.dc]--
 				
 			case '.':
-				fmt.Printf("%c", memory[dc])
+				fmt.Printf("%c", bf.memory[bf.dc])
 				
 			case ',':
 				reader := bufio.NewReader(os.Stdin)
+				inp := make([]byte, 1)
+				
 				fmt.Print(">")
 				_, err := reader.Read(inp)
 				
@@ -72,23 +72,23 @@ func run(){
 					return
 				}
 				
-				memory[dc] = inp[0]
+				bf.memory[bf.dc] = inp[0]
 				
 			case '[':
-				if memory[dc] == 0 {
+				if bf.memory[bf.dc] == 0 {
 					// search for matching closing
 					encounters := 1
 					 for {
-						pc++
+						bf.pc++
 						
-						if pc >= len(program) || pc < 0 {
+						if bf.pc >= len(bf.program) || bf.pc < 0 {
 							fmt.Println("ERROR: Program counter out-of-bounds")
 							return
 						}
 						
-						if program[pc] == '[' {
+						if bf.program[bf.pc] == '[' {
 							encounters++
-						} else if program[pc] == ']' {
+						} else if bf.program[bf.pc] == ']' {
 							encounters--
 							if encounters == 0 {
 								break
@@ -98,20 +98,20 @@ func run(){
 				}
 				
 			case ']':
-				if memory[dc] != 0 {
+				if bf.memory[bf.dc] != 0 {
 					// search for matching opening
 					encounters := 1
 					 for {
-						pc--
+						bf.pc--
 						
-						if pc >= len(program) || pc < 0 {
+						if bf.pc >= len(bf.program) || bf.pc < 0 {
 							fmt.Println("ERROR: Program counter out-of-bounds")
 							return
 						}
 						
-						if program[pc] == ']' {
+						if bf.program[bf.pc] == ']' {
 							encounters++
-						} else if program[pc] == '[' {
+						} else if bf.program[bf.pc] == '[' {
 							encounters--
 							if encounters == 0 {
 								break
@@ -122,7 +122,7 @@ func run(){
 		}
 		
 		// Increment program counter
-		pc++
+		bf.pc++
 	}
 }
 
@@ -133,6 +133,7 @@ func main(){
 		return
 	}
 
-	load(os.Args[1])
-	run()
+	bf := BF{}
+	bf.Load(os.Args[1])
+	bf.Run()
 }
